@@ -1,0 +1,31 @@
+.login{
+    background: linear-gradient(-45deg, #7F5A83, #0D324D, #2A2A72, #36096D
+    );
+	background-size: 400% 400%;
+	animation: gradient 15s ease infinite;
+	height: 100vh;
+
+}
+@keyframes gradient {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+.login input{
+    width:20%;
+    border-radius:12px;
+    border: none;
+    padding:8px 7px; 
+}
+.login button{
+    padding:8px 12px;
+
+    border:none;
+    border-radius: 12px;
+}

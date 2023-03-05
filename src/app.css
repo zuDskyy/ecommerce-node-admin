@@ -1,0 +1,29 @@
+.container{
+    display: flex;
+    margin-top:10px;
+}
+
+.link{
+    text-decoration: none;
+    color: inherit;
+    
+}
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@200&family=Play&family=Sora:wght@200&family=Tilt+Neon&display=swap');
+
+html,body{
+    margin: 0;
+   
+}
+
+.containerThemelight{
+    font-family: "Play";
+   background-color: white;
+   color:black;
+}
+.containerThemeDark{
+    font-family: "Sora";
+    background: #08192e;
+    color:rgba(226, 224, 224, 0.911);
+    
+    
+}
