@@ -1,108 +1,228 @@
-import { useState } from 'react';
-import './newproduct.css'
-import {getStorage, ref, uploadBytesResumable, getDownloadURL} from 'firebase/storage'
-import app from '../../firebase';
-import {addProduct} from '../../redux/apiCalls'
-import {useDispatch} from 'react-redux';
-
+import { Fragment, useEffect, useState } from "react";
+import "./newproduct.css";
+import { Button, Typography } from "@mui/material";
+import { addProduct } from "../../redux/apiCalls";
+import { useDispatch } from "react-redux";
+import { userRequest } from "../../requestMethods";
+const ASSETS = process.env.REACT_APP_ASSETS_IJORDAN;
 function NewProduct() {
   const [inputs, setInputs] = useState({});
-  const [file,setFile] = useState(null)
-  const [cat,setCat] = useState([])
-  const dispatch = useDispatch()
- 
+  const [showImageFilewithblob, setShowImageFilewithblob] = useState(null);
+  const [fileUploadSuccess, setFileUploadSuccess] = useState(null);
+  const [file, setFile] = useState(null);
+  const [cat, setCat] = useState([]);
+  const dispatch = useDispatch();
+
   const handleChange = (e) => {
-    setInputs(prev => {
-      return {...prev, [e.target.name] : e.target.value}
-    })
-  }
-   const handleCat = (e) => {
-        setCat(e.target.value.split(","));
-   }
-
-   const handleClick = (e) =>{
-        e.preventDefault();
-        const fileName = new Date().getTime()  + file.name;
-      const storage = getStorage(app);
-      const storageRef = ref(storage, fileName)
-
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-// Register three observers:
-// 1. 'state_changed' observer, called any time the state changes
-// 2. Error observer, called on failure
-// 3. Completion observer, called on successful completion
-uploadTask.on('state_changed', 
-  (snapshot) => {
-    // Observe state change events such as progress, pause, and resume
-    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-    console.log('Upload is ' + progress + '% done');
-    switch (snapshot.state) {
-      case 'paused':
-        console.log('Upload is paused');
-        break;
-      case 'running':
-        console.log('Upload is running');
-        break;
-        default:
+    if (e.target.name === "price" && e.target.value <= 0) {
+      return;
     }
-  }, 
-  (error) => {
-    // Handle unsuccessful uploads
-    console.log(error)
-  }, 
-  () => {
-    // Handle successful uploads on complete
-    // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-      const product = {...inputs, img: downloadURL,categories:cat}
-      addProduct(product,dispatch)
-      
+    setInputs((prev) => {
+      return { ...prev, [e.target.name]: e.target.value };
     });
+  };
+  const handleCat = (e) => {
+    setCat(e.target.value.split(","));
+  };
 
+  const handleUploadProductImage = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
+    if (selectedFile) {
+      const fileType = selectedFile.type;
+
+      const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml"];
+
+      if (!allowedTypes.includes(fileType)) {
+        e.target.value = null;
+        setFile(null);
+        return;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (file) {
+      const blob = URL.createObjectURL(file);
+      setShowImageFilewithblob(blob);
+    }
+  }, [file]);
+
+  const handleClick = async (e) => {
+    e.preventDefault();
+
+    if (file) {
+      const datafile = new FormData();
+      datafile.append("name", Date.now() + file.name);
+      datafile.append("file", file, file.type);
+
+      try {
+        const res = await userRequest.post("/upload/productassets", datafile);
+        setFileUploadSuccess(res.data);
+        const product = { ...inputs, img: res.data.filename, categories: cat };
+        await addProduct(product, dispatch);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if(fileUploadSuccess){
+    setTimeout(() => {
+      setFileUploadSuccess(null);
+      window.location.reload();
+    }, 2000);
   }
-   
-);
-  
-   }
- 
+  }, [fileUploadSuccess]);
+
   return (
-    <div className="newProduct">
-    <h1 className="addProductTitle">New Product</h1>
-    <form className="addProductForm">
-      <div className="addProductItem">
-        <label>Image</label>
-        <input  type="file" id="file"  onChange={e => setFile(e.target.files[0])}/>
+    <div className="newProduct" style={{ display: "flex" }}>
+      <form className="addProductForm">
+        <h1 className="addProductTitle">New Product</h1>
+        <div className="addProductItem">
+          <label
+            htmlFor="file"
+            style={{ display: "flex", flexDirection: "column", gap: 10 }}
+          >
+            Image *
+            <span
+              style={{
+                padding: 8,
+                outline: "none",
+                fontSize: 16,
+                width: "60%",
+                textAlign: "center",
+                margin: "0px auto",
+                background: "rgb(0,0,0,0.5)",
+                color: "white",
+                textShadow: "0 0 3px #FF0000",
+                borderRadius: 8,
+              }}
+            >
+              Upload Image
+            </span>
+          </label>
+          <input
+            type="file"
+            id="file"
+            onChange={(e) => handleUploadProductImage(e)}
+            accept="image/*"
+            hidden
+          />
+        </div>
+        <div className="addProductItem">
+          <label>Title*</label>
+          <input
+            name="title"
+            type="text"
+            placeholder="Apple Airpods"
+            onChange={handleChange}
+          />
+        </div>
+        <div className="addProductItem">
+          <label>Description *</label>
+          <input
+            name="desc"
+            type="text"
+            placeholder="desc..."
+            onChange={handleChange}
+          />
+        </div>
+        <div className="addProductItem">
+          <label>Price *</label>
+          <input
+            name="price"
+            type="number"
+            placeholder="100"
+            onChange={handleChange}
+          />
+        </div>
+        <div className="addProductItem">
+          <label>Categories *</label>
+          <select name="inStock" id="" onChange={handleCat}>
+            <option value="jeans">jeans</option>
+            <option value="tshirt">t-shirt</option>
+            <option value="shoes">shoes</option>
+            <option value="sneakers">sneakers</option>
+            <option value="jacket">jacket</option>
+          </select>
+        </div>
+        <div className="addProductItem">
+          <label>Stock *</label>
+          <select name="inStock" id="" onChange={handleChange}>
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+        </div>
+
+        <button onClick={handleClick} className="addProductButton">
+          Create
+        </button>
+      </form>
+
+      {fileUploadSuccess && (
+        <Typography
+          sx={{
+            color: "white",
+
+            padding: 1.4,
+            position: "absolute",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "black",
+            borderRadius: 8,
+            gap: 2,
+          }}
+        >
+          <img width={30} height={30} src={ASSETS + "/success.png"} />
+          {fileUploadSuccess?.message.toUpperCase()} 
+        </Typography>
+      )}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        {file && (
+          <span style={{ display: "flex" }}>
+            <img
+              width={500}
+              height={500}
+              style={{
+                borderRadius: "25px",
+                objectFit: "contain",
+                background: "rgb(0,0,0,0.3)",
+                boxShadow: " 0 0 5px 5px white",
+                WebkitBoxShadow: "0 0 20px rgba(250,250,250,0.3)",
+              }}
+              src={showImageFilewithblob}
+              alt=""
+            />
+            <span
+              onClick={() => setFile(null)}
+              style={{ fontSize: 18, color: "blue" }}
+            >
+              <img
+                width="50"
+                height="50"
+                src={ASSETS + "/closeimage.png"}
+                alt=""
+              />
+            </span>
+          </span>
+        )}
       </div>
-      <div className="addProductItem">
-        <label>Title</label>
-        <input name="title" type="text" placeholder="Apple Airpods"  onChange={handleChange}/>
-      </div>
-      <div className="addProductItem">
-        <label>Description</label>
-        <input name="desc" type="text" placeholder="desc..."  onChange={handleChange}/>
-      </div>
-      <div className="addProductItem">
-        <label>Price</label>
-        <input name="price" type="number" placeholder="100" onChange={handleChange} />
-      </div>
-      <div className="addProductItem">
-        <label>Categories</label>
-        <input name="categories" type="text" placeholder="jeans,skirts"  onChange={handleCat}/>
-      </div>
-      <div className="addProductItem">
-        <label>Stock</label>
-        <select name="inStock" id="" onChange={handleChange}>
-          <option value="true">YES</option>
-          <option value="fasle">NO</option>
-        </select>
-      </div>
-      
-      <button  onClick={handleClick} className="addProductButton">Create</button>
-    </form>
-  </div>
-  )
+    </div>
+  );
 }
 
-export default NewProduct
+export default NewProduct;

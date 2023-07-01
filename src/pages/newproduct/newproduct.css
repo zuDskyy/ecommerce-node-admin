@@ -29,10 +29,10 @@
   
   .addProductButton {
     margin-top: 10px;
-    padding: 7px 10px;
+    padding: 10px 15px;
     border: none;
-    border-radius: 10px;
-    background-color: darkblue;
+    border-radius: 6px;
+    background-color: rgba(11, 11, 141, 0.767);
     color: white;
     font-weight: 600;
     cursor: pointer;

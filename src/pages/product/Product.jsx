@@ -2,14 +2,22 @@ import "./product.css";
 import { Publish } from "@material-ui/icons";
 import { Link, useLocation } from "react-router-dom";
 import Chart from "../../components/chart/Chart";
+import {ToastContainer, toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { useState } from "react";
 import { useMemo } from "react";
 import { userRequest } from "../../requestMethods";
 import { useEffect } from "react";
-import { updateProduct } from "../../redux/apiCalls";
-import {getStorage, ref, uploadBytesResumable, getDownloadURL} from 'firebase/storage'
-import app from '../../firebase';
+import { getProducts, updateProduct } from "../../redux/apiCalls";
+import "react-toastify/dist/ReactToastify.css";
+import { getResultnotify } from "../../components/_resultsuccess/resultNotify";
+
+
+
+
+
+
+
 
 function Product() {
   const location = useLocation();
@@ -21,6 +29,8 @@ function Product() {
 
 const [inputs, setInputs] = useState({});
 const [file,setFile] = useState(null)
+const [getEditSuccess,setGetEditSuccess] = useState(null);
+const [getEditError,setGetEditError] = useState(false);
 const dispatch = useDispatch()
 
 const handleChange = (e) => {
@@ -28,6 +38,11 @@ const handleChange = (e) => {
     return {...prev, [e.target.name] : e.target.value}
   })
 }
+
+
+
+
+
   const MONTHS  = useMemo(
     () => [
       "Jan",
@@ -45,53 +60,48 @@ const handleChange = (e) => {
     ],
     []
   )
-  const handleClick = (e) =>{
+  const handleUpdateProduct = async (e) =>{
     e.preventDefault();
-    const fileName = new Date().getTime()  + file.name;
-  const storage = getStorage(app);
-  const storageRef = ref(storage, fileName)
+   
+if(file){
+   const filedata = new FormData();
+   filedata.append("name", Date.now()  + file.name);
+   filedata.append("file", file, file.type);
 
-  const uploadTask = uploadBytesResumable(storageRef, file);
 
-// Register three observers:
-// 1. 'state_changed' observer, called any time the state changes
-// 2. Error observer, called on failure
-// 3. Completion observer, called on successful completion
-uploadTask.on('state_changed', 
-(snapshot) => {
-// Observe state change events such as progress, pause, and resume
-// Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-console.log('Upload is ' + progress + '% done');
-switch (snapshot.state) {
-  case 'paused':
-    console.log('Upload is paused');
-    break;
-  case 'running':
-    console.log('Upload is running');
-    break;
-    default:
+   try{
+    const res = await userRequest.post("/upload/productassets", filedata);
+      
+  const products = {...inputs, img: res?.data.filename}
+ updateProduct(product._id,  products, dispatch);
+ getProducts(dispatch);
+  setGetEditSuccess(res.data);
+   }catch(err){
+   getEditError(true);
+   }
+}else{
+  try{
+    if(Object.keys(inputs).length !== 0){
+  updateProduct(product._id,  {...inputs}, dispatch).then(
+    data =>  setGetEditSuccess(data)
+  );
+  getProducts(dispatch);
+
+ }
+  }catch(err){
+    getEditError(true);
+  }
+ 
 }
-}, 
-(error) => {
-// Handle unsuccessful uploads
-console.log(error)
-}, 
-() => {
-// Handle successful uploads on complete
-// For instance, get the download URL: https://firebasestorage.googleapis.com/...
-getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-  const products = {...inputs, img: downloadURL}
-  updateProduct(product._id,  products, dispatch)
-  
-  
-});
-
+ if(Object.keys(inputs).length === 0){
+    return getResultnotify("empty");
+  }
 }
 
-);
 
-}
+
+
+
 
 
   useEffect(() => {
@@ -107,13 +117,40 @@ getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               {name:MONTHS[item._id - 1], Sales : item.total},
             ])
           )
-        }catch(err){console.log(err)}
+        }catch(err){
+          console.log(err)
+        }
         
     }
     getStats();
   },[productId, MONTHS]);
+
+ 
+
+//success error message
+ useEffect(() => {
+  if(getEditSuccess  ){
+   return  getResultnotify("ok");
+  }
+  
+  if(getEditError){
+    return getResultnotify("error");
+  }
   
  
+ },[getEditSuccess, getEditError])
+
+useEffect(() => {
+  if(getEditSuccess || getEditError){
+  setTimeout(() => {
+     setGetEditSuccess(null);
+     setGetEditError(null);
+     setInputs(null);
+     window.location.reload();
+  }, 1000);
+}
+},[getEditSuccess,setGetEditError])
+
   return (
     <div className="product">
       <div className="productTitleContainer">
@@ -154,10 +191,10 @@ getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
       <div className="productBottom">
         <form className="productForm">
           <div className="productFormLeft">
-            <label htmlFor="">Product name</label>
-            <input  type="text" placeholder={product.title}  onChange={handleChange}/>
-            <label htmlFor="">Product Description</label>
-            <input type="text" placeholder={product.desc}  onChange={handleChange}/>
+            <label htmlFor="" >Product name</label>
+            <input  type="text" name="title" placeholder={product.title}  onChange={handleChange}/>
+            <label htmlFor="" >Product Description</label>
+            <input type="text" name="desc" placeholder={product.desc}  onChange={handleChange}/>
             <label htmlFor="">Price</label>
             <input name="price" type="text" placeholder={product.price}  onChange={handleChange}/>
             <label>In Stock</label>
@@ -166,6 +203,7 @@ getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               <option value="false">No</option>
             </select>
           </div>
+            <ToastContainer/>
           <div className="productFormRight">
             <div className="productUpload">
               <img src={product.img} alt="" className="productUploadImg" />
@@ -174,7 +212,8 @@ getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               </label>
               <input type="file" id="file" hidden  onChange={e => setFile(e.target.files[0])}/>
             </div>
-            <button className="productButton" onClick={handleClick}>Update</button>
+            <button className="productButton" onClick={handleUpdateProduct}>Update</button>
+          
           </div>
         </form>
       </div>

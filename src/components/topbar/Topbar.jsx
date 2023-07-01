@@ -62,7 +62,7 @@ const MaterialUISwitch = styled(Switch)(({ theme }) => ({
 const Topbar = () => {
   const [themeDown,setThemeDown] = useState(false);
    const dispatch = useDispatch();
-    const user = useSelector(state => state.user.users.find(item => item._id === state.user.currentUser._id))
+    const user = useSelector(state => state.user.currentUser)
    const navigate =  useNavigate();
     const handleLogout = (e) => {
       e.preventDefault();
@@ -102,7 +102,7 @@ const Topbar = () => {
               </div>
                 </div>
                 <div onClick={handleLogout}>
-                <img src={user.img || ""} alt="" className="topAvatar"/>
+                <img src={user?.img || ""} alt="" className="topAvatar"/>
                 </div>
                 </div>
         </div>

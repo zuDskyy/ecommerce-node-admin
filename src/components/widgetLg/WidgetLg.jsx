@@ -1,23 +1,24 @@
 import { useEffect } from 'react';
 import { useState } from 'react';
-import { userRequest } from '../../requestMethods';
 import './widgetlg.css'
 import {format} from 'timeago.js'
+import { useSelector } from 'react-redux';
+import { __updateUserRequestHeaders, _getOrdersByUSerId } from '../../utils/requestTokenUtils';
 
 function WidgetLg() {
   const [orders,setOrders] = useState([]);
-
+  const adminToken = useSelector(state => state.user.currentUser.accessToken)
    useEffect(() => {
-     const getOrders = async () => {
-        try{
-        const res= await userRequest.get("orders")
-        setOrders(res.data);
-        }catch {  
-        }
-        
-     }
-     getOrders();
-   },[])
+    
+     if(adminToken){ 
+        __updateUserRequestHeaders(adminToken);
+       _getOrdersByUSerId().then(data => setOrders(data));
+      }
+    
+   
+   },[adminToken])
+
+   console.log(orders)
   const Button = ({type}) =>{
     return <button className={"widgetLgButton " + type} >{type}</button>
   }
@@ -41,7 +42,7 @@ function WidgetLg() {
            Status
           </th>
           </tr>
-          {orders.map((order) => (
+          {orders?.map((order) => (
             <tr className="widgetLgTr" key={order._id}>
               <td className="widgetLgUser">
                 <span className="widgetLgName">{order.userId}</span>
