@@ -4,12 +4,15 @@ import { Button, Typography } from "@mui/material";
 import { addProduct } from "../../redux/apiCalls";
 import { useDispatch } from "react-redux";
 import { userRequest } from "../../requestMethods";
+import {ToastContainer, toast } from "react-toastify";
+import { getResultnotify } from "../../components/_resultsuccess/resultNotify";
 const ASSETS = process.env.REACT_APP_ASSETS_IJORDAN;
 function NewProduct() {
   const [inputs, setInputs] = useState({});
   const [showImageFilewithblob, setShowImageFilewithblob] = useState(null);
   const [fileUploadSuccess, setFileUploadSuccess] = useState(null);
   const [file, setFile] = useState(null);
+  const [fileUploadError,setFileUploadError] = useState(null);
   const [cat, setCat] = useState([]);
   const dispatch = useDispatch();
 
@@ -62,9 +65,13 @@ function NewProduct() {
         setFileUploadSuccess(res.data);
         const product = { ...inputs, img: res.data.filename, categories: cat };
         await addProduct(product, dispatch);
+
       } catch (err) {
-        console.log(err);
+       setFileUploadError(err);
       }
+    }
+    if(!file && Object.keys(inputs).length === 0){
+    return   getResultnotify("empty")
     }
   };
 
@@ -72,11 +79,20 @@ function NewProduct() {
     if(fileUploadSuccess){
     setTimeout(() => {
       setFileUploadSuccess(null);
+      setFileUploadError(null);
       window.location.reload();
     }, 2000);
   }
-  }, [fileUploadSuccess]);
+}, [fileUploadSuccess]);
+ useEffect(() => {
+    if(fileUploadSuccess){
+    return   getResultnotify("ok")
+    }
 
+     if(fileUploadError){
+    return   getResultnotify("error")
+     }
+ },[fileUploadError,fileUploadSuccess])
   return (
     <div className="newProduct" style={{ display: "flex" }}>
       <form className="addProductForm">
@@ -161,29 +177,8 @@ function NewProduct() {
           Create
         </button>
       </form>
+    <ToastContainer/>
 
-      {fileUploadSuccess && (
-        <Typography
-          sx={{
-            color: "white",
-
-            padding: 1.4,
-            position: "absolute",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            background: "black",
-            borderRadius: 8,
-            gap: 2,
-          }}
-        >
-          <img width={30} height={30} src={ASSETS + "/success.png"} />
-          {fileUploadSuccess?.message.toUpperCase()} 
-        </Typography>
-      )}
       <div
         style={{
           display: "flex",

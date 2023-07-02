@@ -7,9 +7,9 @@ export const ResultNotify = ({result}) => {
 
   return (
     <div>
-      { result === "ok" &&  <p>Edit  Uploaded Successfully!</p>}
-      { result === "error" &&  <p>Edit  Not  Uploaded Successfully!</p>}
-      { result === "empty" &&  <p>Value is Empty !  Please specify in the field to be changed</p>}
+      { result === "ok" &&  <p> Uploaded Successfully!</p>}
+      { result === "error" &&  <p>  Not Uploaded Successfully!</p>}
+      { result === "empty" &&  <p>Input or File is Empty !  Please specify in the field to be changed</p>}
    </div>
   )
 }
@@ -33,8 +33,4 @@ export const ResultNotify = ({result}) => {
           draggable:true
         });
       }
-       } 
-
-
-
-
+       }

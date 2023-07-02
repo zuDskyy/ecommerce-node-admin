@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { addUser } from "../../redux/apiCalls";
-import app from '../../firebase';
+import {ToastContainer, toast } from "react-toastify";
 import "./newuser.css";
+import { getResultnotify } from "../../components/_resultsuccess/resultNotify";
 
-import {getStorage, ref, uploadBytesResumable, getDownloadURL} from 'firebase/storage'
+
 import { Publish } from "@material-ui/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -13,12 +14,14 @@ export default function NewUser() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email,setEmail] = useState("");
+  const [newUserUploadedSuccess , setNewUserUploadedSuccess] = useState(null);
+  const [newUserUploadedError, setNewUserUploadedError] = useState(null);
   const [file,setFile] = useState(null)
   const navigate = useNavigate();
- 
+
   const dispatch = useDispatch();
 
-  
+
   const handleChange = (e) => {
     setInputs(prev => {
       return {...prev, [e.target.name] : e.target.value}
@@ -27,51 +30,65 @@ export default function NewUser() {
 
   const handleClick = (e) => {
     e.preventDefault();
-    const fileName = new Date().getTime()  + file.name;
-  const storage = getStorage(app);
-  const storageRef = ref(storage, fileName)
 
-  const uploadTask = uploadBytesResumable(storageRef, file);
-
-
-    uploadTask.on('state_changed', 
-  (snapshot) => {
-    // Observe state change events such as progress, pause, and resume
-    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-    console.log('Upload is ' + progress + '% done');
-    switch (snapshot.state) {
-      case 'paused':
-        console.log('Upload is paused');
-        break;
-      case 'running':
-        console.log('Upload is running');       
-        break;
-        default:
-    }
-  }, 
-  (error) => {
-    // Handle unsuccessful uploads
-    console.log(error)
-  }, 
-  () => {
-    // Handle successful uploads on complete
-    // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-      const user = {password, username,email, img: downloadURL}
+    if(file){
+      try{
+      const datafile = new FormData();
+      datafile.append("name" , Date.now() + file.name);
+      datafile.appent("file", file, file.type)
+      const res = await userRequests.post('/user/profilePicture', filedata)
+       setNewUserUploadedSuccess(res.data)
+      const user = {password, username,email, img: res?.data.filename}
       addUser(user,dispatch)
-      navigate('/users');
-      
-    });
+    }catch(err){
+      setNewUserUploadedError(err)
+    }
 
+  }else{
+    try{
+    const user = {password, username,email}
+    addUser(user,dispatch).then(data => setNewUserUploadedSuccess(data));
+  }catch(err){
+     setNewUserUploadedError(err);
   }
-   
+  }
+
+     if(password === "" || username  ===  "" || email === ""){
+        return getResultnotify("empty");
+     }
+
+
 );
-  
-  }
+
+
+
+  //success error message
+   useEffect(() => {
+    if(newUserUploaderSuccess){
+     return  getResultnotify("ok");
+    }
+
+    if(newUserUploadedError){
+      return getResultnotify("error");
+    }
+
+
+  },[newUserUploadedSuccess, newUserUploadedError])
+
+  useEffect(()=> {
+    if(newUserUploadedSuccess){
+      setTimeOut(() => {
+         setNewUserUploadedSuccess(null);
+         setNewUserUploadedError(null);
+         window.location.reload();
+      }, 2000)
+    }
+
+  },[newUserUploadedSuccess]);
 
   return (
     <div className="newUser">
+     <ToastContainer/>
       <h1 className="newUserTitle">NewUser</h1>
       <form className="newUserForm">
         <div className="newUserItem">

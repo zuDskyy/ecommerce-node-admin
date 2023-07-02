@@ -1,9 +1,10 @@
 import { CalendarToday, LocationSearching, MailOutline, PermIdentity, PhoneAndroid, Publish } from '@material-ui/icons'
 import { useState } from 'react';
-import {getStorage, ref, uploadBytesResumable, getDownloadURL} from 'firebase/storage'
+import {userRequests} from "../../requestMethods"
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import app from '../../firebase';
+import {ToastContainer, toast } from "react-toastify";
+import { getResultnotify } from "../../components/_resultsuccess/resultNotify";
 import {  updateUser } from '../../redux/apiCalls';
 import './user.css'
 
@@ -15,59 +16,71 @@ function User() {
     const location = useLocation();
     const navigate = useNavigate();
     const userId = location.pathname.split("/")[2];
+    const [userEditUploaderSuccess, setUserEditUploaderSuccess] = useState(null);
+    const [userEditUploadedError, setUserEditUploaderError] = useState(null);
     const product = useSelector((state) =>
+
     state.user.users.find((user) => user._id === userId)
   );
- 
+
    const handleChange = (e) => {
     setInputs(prev => {
         return {...prev , [e.target.value] : e.target.value}
     })
    }
-   const handleClick = (e) => {
+   const handleClick = async (e) => {
     e.preventDefault();
-    const fileName = new Date().getTime()  + file.name;
-    const storage = getStorage(app);
-    const storageRef = ref(storage, fileName)
-
-    const uploadTask = uploadBytesResumable(storageRef, file);
 
 
-      uploadTask.on('state_changed', 
-      (snapshot) => {
-        // Observe state change events such as progress, pause, and resume
-        // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Upload is ' + progress + '% done');
-        switch (snapshot.state) {
-          case 'paused':
-            console.log('Upload is paused');
-            break;
-          case 'running':
-            console.log('Upload is running');
-            break;
-            default:
+     if(file){
+       const filedata = new FormData();
+       filedata.append('name', Date.now() + file.name);
+       filedata.append('file',file , file.type);
+       try{
+        const res = await userRequests.post('/user/profilePicture', filedata);
+          setUserEditUploaderSuccess(res.data);
+          const user = {...inputs, img: res?.data.filename}
+          updateUser(product._id, user, dispatch);
+        }catch(err){
+          setUserEditUploaderError(err);
         }
-      }, 
-      (error) => {
-        // Handle unsuccessful uploads
-        console.log(error)
-      }, 
-      () => {
-        // Handle successful uploads on complete
-        // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          const user = {...inputs, img: downloadURL}
-          updateUser(product._id, user, dispatch)
-         
-           navigate('/users');
-          
-        });
+
+    }else{
+      try{
+       updateUser(product._id,{...inputs}, dispatch).then(data => setUserEditUploaderSuccess(res.data)) ;
+     }catch(err){
+       setUserEditUploaderError(err);
+     }
+    }
+      if(Object.keys(inputs).length === 0 ){
+        return getResultnotify("empty");
       }
-    );
-    
    }
- 
+
+   //success error message
+    useEffect(() => {
+     if(userEditUploaderSuccess){
+      return  getResultnotify("ok");
+     }
+
+     if(userEditUploadedError){
+       return getResultnotify("error");
+     }
+
+
+   },[userEditUploaderSuccess, userEditUploadedError])
+
+   useEffect(()=> {
+     if(userEditUploadedSuccess){
+       setTimeOut(() => {
+          setUserEditUploaderSuccess(null);
+          setUserEditUploaderError(null);
+          window.location.reload();
+       }, 2000)
+     }
+
+   },[userEditUploadedSuccess])
+
   return (
     <div className='user'>
        <div className="userTitleContainer">
@@ -118,9 +131,11 @@ function User() {
                     New York | USA
                 </span>
                 </div>
-                
+
             </div>
         </div>
+
+        <ToastContainer/>
         <div className="userUpdate">
             <span className="userUpdateTitle">Edit</span>
             <form  className="userUpdateForm">
@@ -133,22 +148,22 @@ function User() {
                     <div className="userUpdateItem">
                         <label >Full Name</label>
                         <input  type="text" placeholder="Anna Becker" className="userUpdateInput"  onChange={handleChange}/>
-                        
+
                     </div>
                     <div className="userUpdateItem">
                         <label >Email</label>
                         <input name="email" type="text" placeholder={product.email}className="userUpdateInput" onChange={handleChange}/>
-                        
+
                     </div>
                     <div className="userUpdateItem">
                         <label >Phone</label>
                         <input type="text" placeholder="+1 123 456 78" className="userUpdateInput" onChange={handleChange}/>
-                        
+
                     </div>
                     <div className="userUpdateItem">
                         <label >adress</label>
                         <input type="text" placeholder="New York | USA" className="userUpdateInput" onChange={handleChange}/>
-                        
+
                     </div>
                 </div>
                 <div className="userUpdateRight">
